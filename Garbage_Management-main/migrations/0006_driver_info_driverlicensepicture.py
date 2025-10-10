@@ -1,0 +1,18 @@
+
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('app1', '0005_driver_info_driverdaylic'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='driver_info',
+            name='driverLicensePicture',
+            field=models.ImageField(default='', upload_to=''),
+        ),
+    ]

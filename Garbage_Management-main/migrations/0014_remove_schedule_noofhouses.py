@@ -1,0 +1,17 @@
+
+
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('app1', '0013_auto_20180313_1214'),
+    ]
+
+    operations = [
+        migrations.RemoveField(
+            model_name='schedule',
+            name='noOfHouses',
+        ),
+    ]

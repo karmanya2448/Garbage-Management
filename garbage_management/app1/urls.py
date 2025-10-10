@@ -1,0 +1,32 @@
+from django.urls import path
+from . import views  # This relative import 
+
+urlpatterns = [
+    path('', views.home, name='home'),
+    path('signup_user/', views.signup_user, name='signup_user'),
+    path('login_user/', views.login_user, name='login_user'),
+    path('user_login_Check/', views.user_login_Check, name='user_login_Check'),
+    path('driver_login_Check/', views.driver_login_Check, name='driver_login_Check'),
+    path('login_driver/', views.driver_login_Check, name='login_driver'),
+    path("user/details/", views.see_user_details, name="see_user_details"),
+    path('signup_driver/', views.signup_driver, name='signup_driver'),
+    path('forgotpassword/', views.forgot_password_check, name='forgot_password'),
+    path('adlog/', views.login_admin, name='adlog'),
+    path('login_admin/', views.login_admin, name='login_admin'),
+    path('adminPage/', views.adminPage, name='adminPage'),
+    path('validate_user/', views.validate_user, name='validate_user'),
+    path('validate_driver/', views.validate_driver, name='validate_driver'),
+    path('adminHome/', views.adminHome, name='adminHome'),
+    path('schedule/create/', views.create_schedule, name='create_schedule'),
+    path('schedule/add_garbage/', views.add_garbage, name='add_garbage'),
+    path('schedule/see_garbage/', views.see_garbage, name='see_garbage'),
+    path('see_garbage', views.see_garbage, name='see_garbage'),
+    #path('garbage/add/', views.add_garbage, name='add_garbage'),
+    path('update_schedule', views.update_schedule, name='update_schedule'),
+    path('view_schedule', views.view_schedule, name='view_schedule'),    
+    path('see_schedules', views.see_schedules, name='see_schedules'),    
+    path('update_details', views.update_details, name='update_details'),
+    path('func_update_details', views.func_update_details, name='func_update_details'),
+    path("user/logout/", views.logged_out_user, name="user_logout"),
+    path("driver/logout/", views.driver_logout, name="driver_logout"),
+]

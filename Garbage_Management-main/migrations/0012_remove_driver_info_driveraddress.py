@@ -1,0 +1,17 @@
+
+
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('app1', '0011_auto_20180223_1137'),
+    ]
+
+    operations = [
+        migrations.RemoveField(
+            model_name='driver_info',
+            name='driverAddress',
+        ),
+    ]
