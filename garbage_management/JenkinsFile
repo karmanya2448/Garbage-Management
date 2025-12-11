@@ -90,20 +90,6 @@ spec:
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                container('sonar-scanner') {
-                    sh '''
-                        sonar-scanner \
-                            -Dsonar.projectKey=garbage_management \
-                            -Dsonar.sources=. \
-                            -Dsonar.host.url=http://my-sonarqube-sonarqube.sonarqube.svc.cluster.local:9000 \
-                            -Dsonar.login=sqp_5c6bcf57fec846bce3562d1d777b633b4360c411 \
-                            -Dsonar.python.coverage.reportPaths=coverage.xml
-                    '''
-                }
-            }
-        }
 
         stage('Login to Nexus Registry') {
             steps {
