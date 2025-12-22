@@ -1,0 +1,156 @@
+properties([
+  pipelineTriggers([]),
+  durabilityHint('PERFORMANCE_OPTIMIZED')
+])
+
+pipeline {
+
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  volumes:
+  - name: docker-graph-storage
+    emptyDir: {}
+
+  containers:
+  - name: dind
+    image: docker:dind
+    securityContext:
+      privileged: true
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
+    args:
+    - "--host=tcp://0.0.0.0:2375"
+    volumeMounts:
+    - name: docker-graph-storage
+      mountPath: /var/lib/docker
+
+  - name: sonar-scanner
+    image: sonarsource/sonar-scanner-cli
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
+    command:
+    - cat
+    tty: true
+
+  - name: kubectl
+    image: bitnami/kubectl
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
+    command:
+    - cat
+    tty: true
+"""
+        }
+    }
+
+    options {
+        skipDefaultCheckout()
+    }
+
+    environment {
+        DOCKER_IMAGE = "garbage_management"
+        SONAR_TOKEN = "sqp_5c6bcf57fec846bce3562d1d777b633b4360c411"
+        REGISTRY_HOST = "nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085"
+        REGISTRY = "${REGISTRY_HOST}/2401112"
+        NAMESPACE = "2401112"
+    }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+                echo "✔ Source code checked out successfully"
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                container('dind') {
+                    sh """
+                        docker build -t ${DOCKER_IMAGE}:${BUILD_NUMBER} -t ${DOCKER_IMAGE}:latest .
+                        docker image ls
+                    """
+                }
+            }
+        }
+
+        stage('Run Tests & Generate Coverage') {
+            steps {
+                container('dind') {
+                    sh """
+                        docker run --rm \
+                        -v $PWD:/workspace \
+                        -w /workspace \
+                        ${DOCKER_IMAGE}:latest \
+                        sh -c "pip install pytest pytest-cov && pytest --maxfail=1 --disable-warnings --cov=. --cov-report=xml"
+                    """
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                container('sonar-scanner') {
+                    sh '''
+                        sonar-scanner \
+                            -Dsonar.projectKey=garbage_management \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=http://my-sonarqube-sonarqube.sonarqube.svc.cluster.local:9000 \
+                            -Dsonar.login=sqp_5c6bcf57fec846bce3562d1d777b633b4360c411 \
+                            -Dsonar.python.coverage.reportPaths=coverage.xml
+                    '''
+                }
+            }
+        }
+
+        stage('Login to Nexus Registry') {
+            steps {
+                container('dind') {
+                    sh '''
+                        docker login nexus-service-for-docker-hosted-registry.nexus.svc.cluster.local:8085 -u admin -p Changeme@2025
+                    '''
+                }
+            }
+        }
+
+        stage('Tag & Push Docker Image to Nexus') {
+            steps {
+                container('dind') {
+                    sh """
+                        echo '📌 Tagging image...'
+                        docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} ${REGISTRY}/${DOCKER_IMAGE}:${BUILD_NUMBER}
+
+                        echo '📤 Pushing image to Nexus...'
+                        docker push ${REGISTRY}/${DOCKER_IMAGE}:${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                container('kubectl') {
+                    sh """
+                        kubectl apply -f deployment.yaml
+                        kubectl set image deployment/garbage-management-app garbage-management-container=${REGISTRY}/${DOCKER_IMAGE}:${BUILD_NUMBER} -n ${NAMESPACE}
+                        kubectl rollout status deployment/garbage-management-app -n ${NAMESPACE}
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo "🎉 CI/CD Pipeline completed successfully!" }
+        failure { echo "❌ CI/CD Pipeline failed" }
+        always  { echo "🔄 Pipeline finished" }
+    }
+}
